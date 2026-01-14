@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+
+{% block title %}Settings{% endblock %}
+
+{% block content %}
+<h1 class="mb-4"><i class="bi bi-gear"></i> Settings</h1>
+
+<div class="row">
+    <!-- Configuration Status -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-check-circle"></i> Configuration Status</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span><strong>Twilio Integration</strong></span>
+                        {% if twilio_configured %}
+                        <span class="badge bg-success">
+                            <i class="bi bi-check-circle"></i> Configured
+                        </span>
+                        {% else %}
+                        <span class="badge bg-danger">
+                            <i class="bi bi-x-circle"></i> Not Configured
+                        </span>
+                        {% endif %}
+                    </div>
+                    <small class="text-muted">Required for sending SMS messages</small>
+                </div>
+
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span><strong>Surveys Configured</strong></span>
+                        {% if surveys_count > 0 %}
+                        <span class="badge bg-success">
+                            <i class="bi bi-check-circle"></i> {{ surveys_count }} Surveys
+                        </span>
+                        {% else %}
+                        <span class="badge bg-danger">
+                            <i class="bi bi-x-circle"></i> No Surveys
+                        </span>
+                        {% endif %}
+                    </div>
+                    <small class="text-muted">Evaluation surveys for different types</small>
+                    <div class="mt-2">
+                        <a href="{{ url_for('surveys') }}" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-file-earmark-text"></i> Manage Surveys
+                        </a>
+                    </div>
+                </div>
+
+                {% if not twilio_configured or surveys_count == 0 %}
+                <div class="alert alert-warning mt-3">
+                    <i class="bi bi-exclamation-triangle"></i> 
+                    <strong>Action Required:</strong> Update your environment variables (.env file) to configure the system.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Change Password -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-key"></i> Change Password</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('settings') }}">
+                    <div class="mb-3">
+                        <label for="current_password" class="form-label">Current Password</label>
+                        <input type="password" class="form-control" id="current_password" name="current_password" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="new_password" class="form-label">New Password</label>
+                        <input type="password" class="form-control" id="new_password" name="new_password" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="confirm_password" class="form-label">Confirm New Password</label>
+                        <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-circle"></i> Update Password
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Test SMS -->
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-phone"></i> Test SMS</h5>
+            </div>
+            <div class="card-body">
+                <p>Send a test SMS to verify your Twilio configuration is working correctly.</p>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="input-group mb-3">
+                            <input type="tel" class="form-control" id="testPhoneNumber" placeholder="+15551234567">
+                            <button class="btn btn-primary" type="button" onclick="sendTestSMS()">
+                                <i class="bi bi-send"></i> Send Test
+                            </button>
+                        </div>
+                        <div id="testResult"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- System Information -->
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-info-circle"></i> System Information</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Version:</strong> 1.0.0</p>
+                <p><strong>Database:</strong> SQLite</p>
+                <p class="mb-0"><strong>Environment Variables:</strong> Configure in <code>.env</code> file</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function sendTestSMS() {
+    const phoneNumber = document.getElementById('testPhoneNumber').value;
+    const resultDiv = document.getElementById('testResult');
+    
+    if (!phoneNumber) {
+        resultDiv.innerHTML = '<div class="alert alert-warning">Please enter a phone number</div>';
+        return;
+    }
+    
+    resultDiv.innerHTML = '<div class="alert alert-info">Sending...</div>';
+    
+    fetch('/api/test-sms', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ phone_number: phoneNumber })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            resultDiv.innerHTML = '<div class="alert alert-success"><i class="bi bi-check-circle"></i> Test SMS sent successfully! Check your phone.</div>';
+        } else {
+            resultDiv.innerHTML = '<div class="alert alert-danger"><i class="bi bi-x-circle"></i> Error: ' + data.error + '</div>';
+        }
+    })
+    .catch(error => {
+        resultDiv.innerHTML = '<div class="alert alert-danger"><i class="bi bi-x-circle"></i> Error sending test SMS</div>';
+    });
+}
+</script>
+{% endblock %}

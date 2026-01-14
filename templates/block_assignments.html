@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+
+{% block title %}Assignments - {{ block.name }}{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('rotation_blocks') }}">Rotation Blocks</a></li>
+            <li class="breadcrumb-item active">{{ block.name }}</li>
+        </ol>
+    </nav>
+    <h1><i class="bi bi-list-check"></i> Assignments for {{ block.name }}</h1>
+    <p class="text-muted">
+        {{ block.start_date.strftime('%B %d, %Y') }} - {{ block.end_date.strftime('%B %d, %Y') }}
+        {% if block.is_active %}
+        <span class="badge bg-success">Active Now</span>
+        {% elif block.is_upcoming %}
+        <span class="badge bg-primary">Upcoming</span>
+        {% else %}
+        <span class="badge bg-secondary">Completed</span>
+        {% endif %}
+    </p>
+</div>
+
+<!-- Bulk Add Assignments -->
+<div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0"><i class="bi bi-plus-circle-dotted"></i> Bulk Add Assignments</h5>
+    </div>
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('bulk_add_assignments', block_id=block.id) }}">
+            <div class="row">
+                <div class="col-md-5">
+                    <label class="form-label"><strong>Select Fellows:</strong></label>
+                    <div class="border rounded p-2" style="max-height: 200px; overflow-y: auto;">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="selectAllFellows">
+                            <label class="form-check-label fw-bold" for="selectAllFellows">
+                                Select All
+                            </label>
+                        </div>
+                        <hr class="my-2">
+                        {% for fellow in fellows %}
+                        <div class="form-check">
+                            <input class="form-check-input fellow-checkbox" type="checkbox" name="fellow_ids" 
+                                   value="{{ fellow.id }}" id="fellow{{ fellow.id }}">
+                            <label class="form-check-label" for="fellow{{ fellow.id }}">
+                                {{ fellow.name }}
+                            </label>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="col-md-5">
+                    <label class="form-label"><strong>Select Surveys:</strong></label>
+                    <div class="border rounded p-2" style="max-height: 200px; overflow-y: auto;">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="selectAllSurveys">
+                            <label class="form-check-label fw-bold" for="selectAllSurveys">
+                                Select All
+                            </label>
+                        </div>
+                        <hr class="my-2">
+                        {% for survey in surveys %}
+                        <div class="form-check">
+                            <input class="form-check-input survey-checkbox" type="checkbox" name="survey_ids" 
+                                   value="{{ survey.id }}" id="survey{{ survey.id }}">
+                            <label class="form-check-label" for="survey{{ survey.id }}">
+                                {{ survey.name }}
+                                <span class="badge bg-secondary">{{ survey.survey_type }}</span>
+                            </label>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-check2-all"></i> Add Selected
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Current Assignments -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-list-ul"></i> Current Assignments ({{ assignments|length }})</h5>
+    </div>
+    <div class="card-body">
+        {% if assignments %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Fellow</th>
+                        <th>Survey</th>
+                        <th>Survey Type</th>
+                        <th>Last Sent</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for assignment in assignments %}
+                    <tr>
+                        <td><strong>{{ assignment.fellow.name }}</strong></td>
+                        <td>{{ assignment.survey.name }}</td>
+                        <td>
+                            {% if assignment.survey.survey_type == 'self' %}
+                            <span class="badge bg-primary">Self</span>
+                            {% elif assignment.survey.survey_type == 'peer' %}
+                            <span class="badge bg-info">Peer</span>
+                            {% elif assignment.survey.survey_type == 'faculty' %}
+                            <span class="badge bg-success">Faculty</span>
+                            {% elif assignment.survey.survey_type == 'rotation' %}
+                            <span class="badge bg-warning">Rotation</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if assignment.last_sent %}
+                            {{ assignment.last_sent.strftime('%b %d, %Y') }}
+                            {% else %}
+                            <span class="text-muted">Not sent yet</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{{ url_for('delete_assignment', id=assignment.id) }}" 
+                               class="btn btn-sm btn-outline-danger"
+                               onclick="return confirm('Remove this assignment?')">
+                                <i class="bi bi-trash"></i> Remove
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-4">
+            <i class="bi bi-inbox" style="font-size: 3rem; color: #dee2e6;"></i>
+            <p class="text-muted mt-3">No assignments yet. Use the form above to add assignments.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="alert alert-info mt-4">
+    <h5><i class="bi bi-info-circle"></i> How Assignments Work</h5>
+    <p>Each assignment links a fellow to a specific survey for this rotation block. When you send Friday evaluations:</p>
+    <ul class="mb-0">
+        <li>All active assignments in the current rotation block will be processed</li>
+        <li>Each fellow will receive a text with their assigned survey link</li>
+        <li>The system tracks when each assignment was last sent to avoid duplicates</li>
+        <li>Assignments are specific to this rotation block only</li>
+    </ul>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Select All Fellows
+document.getElementById('selectAllFellows').addEventListener('change', function() {
+    const checkboxes = document.querySelectorAll('.fellow-checkbox');
+    checkboxes.forEach(cb => cb.checked = this.checked);
+});
+
+// Select All Surveys
+document.getElementById('selectAllSurveys').addEventListener('change', function() {
+    const checkboxes = document.querySelectorAll('.survey-checkbox');
+    checkboxes.forEach(cb => cb.checked = this.checked);
+});
+</script>
+{% endblock %}

@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+
+{% block title %}Send Evaluations{% endblock %}
+
+{% block content %}
+<h1 class="mb-4"><i class="bi bi-send"></i> Send Evaluations</h1>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Select Fellows</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('send_evaluations') }}">
+                    <!-- Select All Checkbox -->
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="selectAll">
+                        <label class="form-check-label fw-bold" for="selectAll">
+                            Select All
+                        </label>
+                    </div>
+
+                    <hr>
+
+                    <!-- Fellows List -->
+                    {% if fellows %}
+                    <div class="mb-3">
+                        {% for fellow in fellows %}
+                        <div class="form-check mb-2">
+                            <input class="form-check-input fellow-checkbox" type="checkbox" name="fellow_ids" value="{{ fellow.id }}" id="fellow{{ fellow.id }}">
+                            <label class="form-check-label" for="fellow{{ fellow.id }}">
+                                <strong>{{ fellow.name }}</strong> - {{ fellow.phone_number }}
+                                {% if fellow.email %}
+                                <br><small class="text-muted">{{ fellow.email }}</small>
+                                {% endif %}
+                            </label>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        No active fellows found. <a href="{{ url_for('add_fellow') }}">Add a fellow</a> to get started.
+                    </div>
+                    {% endif %}
+
+                    <hr>
+
+                    <!-- Custom Message -->
+                    <div class="mb-3">
+                        <label for="custom_message" class="form-label">
+                            <i class="bi bi-chat-text"></i> Custom Message (Optional)
+                        </label>
+                        <textarea class="form-control" id="custom_message" name="custom_message" rows="3" placeholder="Leave blank to use default message"></textarea>
+                        <small class="text-muted">
+                            Default: "Hi [Name], please complete your weekly evaluation: [Survey Link]"
+                        </small>
+                    </div>
+
+                    {% if fellows %}
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="bi bi-send"></i> Send Evaluation Texts
+                        </button>
+                    </div>
+                    {% endif %}
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <!-- Preview Card -->
+        <div class="card mb-3">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="bi bi-phone"></i> Message Preview</h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-light border">
+                    <small class="text-muted">From: {{ config.TWILIO_PHONE_NUMBER or 'Your Twilio Number' }}</small>
+                    <hr>
+                    <p class="mb-0" id="messagePreview">
+                        Hi [Fellow Name], please complete your weekly evaluation: {{ qualtrics_link or '[Survey Link]' }}
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Info Card -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-info-circle"></i> Information</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Survey Link:</strong></p>
+                <p class="small text-break">{{ qualtrics_link or 'Not configured' }}</p>
+                
+                <hr>
+                
+                <p><strong>Tips:</strong></p>
+                <ul class="small">
+                    <li>Select the fellows who need evaluations</li>
+                    <li>You can customize the message or use the default</li>
+                    <li>All sends are logged in the Tracking page</li>
+                    <li>Fellows will receive a text message immediately</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Select All functionality
+document.getElementById('selectAll').addEventListener('change', function() {
+    const checkboxes = document.querySelectorAll('.fellow-checkbox');
+    checkboxes.forEach(cb => cb.checked = this.checked);
+});
+
+// Update message preview when custom message changes
+document.getElementById('custom_message').addEventListener('input', function() {
+    const preview = document.getElementById('messagePreview');
+    if (this.value.trim()) {
+        preview.textContent = this.value;
+    } else {
+        preview.textContent = 'Hi [Fellow Name], please complete your weekly evaluation: {{ qualtrics_link or "[Survey Link]" }}';
+    }
+});
+</script>
+{% endblock %}

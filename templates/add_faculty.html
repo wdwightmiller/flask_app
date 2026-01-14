@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block title %}Add Faculty{% endblock %}
+
+{% block content %}
+<h1 class="mb-4"><i class="bi bi-person-plus"></i> Add Faculty Member</h1>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('add_faculty') }}">
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Full Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="name" name="name" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="phone_number" class="form-label">Phone Number <span class="text-danger">*</span></label>
+                        <input type="tel" class="form-control" id="phone_number" name="phone_number" 
+                               placeholder="(555) 123-4567" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email (Optional)</label>
+                        <input type="email" class="form-control" id="email" name="email" 
+                               placeholder="faculty@hospital.edu">
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle"></i> Add Faculty Member
+                        </button>
+                        <a href="{{ url_for('faculty_list') }}" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-circle"></i> Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

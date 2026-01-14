@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+
+{% block title %}Send Friday Evaluations{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">
+    <i class="bi bi-calendar-check"></i> Send Friday Evaluations
+    {% if is_friday %}
+    <span class="badge bg-success">Today is Friday!</span>
+    {% else %}
+    <span class="badge bg-warning">Not Friday</span>
+    {% endif %}
+</h1>
+
+{% if preview_assignments %}
+<div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0">
+            <i class="bi bi-eye"></i> Preview - {{ preview_assignments|length }} Evaluations Ready to Send
+        </h5>
+    </div>
+    <div class="card-body">
+        <p>The following evaluations will be sent when you click "Send All Evaluations":</p>
+        
+        <div class="table-responsive">
+            <table class="table table-sm table-hover">
+                <thead>
+                    <tr>
+                        <th>Fellow</th>
+                        <th>Phone</th>
+                        <th>Survey</th>
+                        <th>Rotation Block</th>
+                        <th>Message Preview</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in preview_assignments[:20] %}
+                    <tr>
+                        <td><strong>{{ item.fellow.name }}</strong></td>
+                        <td class="small">{{ item.fellow.phone_number }}</td>
+                        <td>
+                            {{ item.survey.name }}
+                            <span class="badge bg-secondary">{{ item.survey.survey_type }}</span>
+                        </td>
+                        <td class="small">{{ item.block.name }}</td>
+                        <td class="small text-muted">
+                            "Hi {{ item.fellow.name }}, please complete your {{ item.survey.name }}:..."
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    {% if preview_assignments|length > 20 %}
+                    <tr>
+                        <td colspan="5" class="text-center text-muted">
+                            ... and {{ preview_assignments|length - 20 }} more
+                        </td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="alert alert-info mt-3">
+            <i class="bi bi-info-circle"></i> <strong>Note:</strong> Only assignments that haven't been sent today will be processed. Duplicates are automatically prevented.
+        </div>
+
+        <form method="POST" action="{{ url_for('send_friday_evaluations') }}">
+            <div class="d-grid">
+                <button type="submit" class="btn btn-success btn-lg" 
+                        onclick="return confirm('Send {{ preview_assignments|length }} evaluation texts now?')">
+                    <i class="bi bi-send"></i> Send All Evaluations ({{ preview_assignments|length }})
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% else %}
+<div class="card">
+    <div class="card-body text-center py-5">
+        <i class="bi bi-check-circle" style="font-size: 4rem; color: #198754;"></i>
+        <h3 class="mt-3">All Caught Up!</h3>
+        <p class="text-muted">
+            {% if is_friday %}
+            There are no evaluations scheduled for today, or all have already been sent.
+            {% else %}
+            Come back on Friday to send evaluations.
+            {% endif %}
+        </p>
+        
+        <div class="mt-4">
+            <a href="{{ url_for('rotation_blocks') }}" class="btn btn-primary">
+                <i class="bi bi-calendar3"></i> View Rotation Blocks
+            </a>
+            <a href="{{ url_for('tracking') }}" class="btn btn-outline-primary">
+                <i class="bi bi-clipboard-data"></i> View Tracking
+            </a>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Information Cards -->
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-info-circle"></i> How It Works</h5>
+            </div>
+            <div class="card-body">
+                <ol>
+                    <li>System finds all active rotation blocks (blocks that include today's date)</li>
+                    <li>Collects all assignments within those blocks marked for Friday sending</li>
+                    <li>Sends each fellow their assigned survey via text message</li>
+                    <li>Tracks what was sent to prevent duplicate messages</li>
+                    <li>Logs everything in the tracking page</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="bi bi-calendar-week"></i> Friday Schedule</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Recommended Workflow:</strong></p>
+                <ul>
+                    <li><strong>Thursday:</strong> Review assignments for active rotation blocks</li>
+                    <li><strong>Friday Morning:</strong> Come to this page and preview what will be sent</li>
+                    <li><strong>Friday (9-10 AM):</strong> Click "Send All Evaluations"</li>
+                    <li><strong>After Sending:</strong> Check tracking page to confirm all sent successfully</li>
+                </ul>
+                <p class="mb-0 small text-muted">
+                    <i class="bi bi-lightbulb"></i> <strong>Tip:</strong> You can send evaluations any day, but Friday is recommended to match your 2-week rotation schedule.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="alert alert-warning mt-4">
+    <h5><i class="bi bi-exclamation-triangle"></i> Before Sending</h5>
+    <p class="mb-0">Make sure you've:</p>
+    <ul class="mb-0">
+        <li>Created rotation blocks for the current 2-week period</li>
+        <li>Added all necessary surveys</li>
+        <li>Assigned fellows to their surveys for the current block</li>
+        <li>Verified fellow phone numbers are correct</li>
+    </ul>
+</div>
+{% endblock %}

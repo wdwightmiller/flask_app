@@ -1,0 +1,208 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Dashboard</h1>
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card stat-card">
+            <div class="card-body">
+                <h5 class="card-title text-muted">Active Fellows</h5>
+                <h2 class="mb-0">{{ total_fellows }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card" style="border-left-color: #0dcaf0;">
+            <div class="card-body">
+                <h5 class="card-title text-muted">Active Surveys</h5>
+                <h2 class="mb-0">{{ total_surveys }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card" style="border-left-color: #198754;">
+            <div class="card-body">
+                <h5 class="card-title text-muted">Evaluations Sent</h5>
+                <h2 class="mb-0">{{ total_evals_sent }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card" style="border-left-color: #dc3545;">
+            <div class="card-body">
+                <h5 class="card-title text-muted">Failed</h5>
+                <h2 class="mb-0">{{ total_evals_failed }}</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Friday Info Card -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card border-primary">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-calendar-week"></i> {{ next_friday_message }}</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2 d-md-flex">
+                    <a href="{{ url_for('send_friday_evaluations') }}" class="btn btn-primary">
+                        <i class="bi bi-calendar-check"></i> Send Friday Evaluations
+                    </a>
+                    <a href="{{ url_for('rotation_blocks') }}" class="btn btn-outline-primary">
+                        <i class="bi bi-calendar3"></i> Manage Rotation Blocks
+                    </a>
+                    <a href="{{ url_for('tracking') }}" class="btn btn-outline-primary">
+                        <i class="bi bi-clipboard-data"></i> View Tracking
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Active Rotation Blocks -->
+{% if active_blocks %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="bi bi-calendar-check"></i> Active Rotation Blocks</h5>
+            </div>
+            <div class="card-body">
+                {% for block in active_blocks %}
+                <div class="alert alert-success mb-2">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>{{ block.name }}</strong><br>
+                            <small>{{ block.start_date.strftime('%B %d') }} - {{ block.end_date.strftime('%B %d, %Y') }}</small>
+                        </div>
+                        <a href="{{ url_for('view_block_assignments', block_id=block.id) }}" class="btn btn-sm btn-success">
+                            View Assignments
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="row mb-4">
+    <!-- Active Fellows -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-people"></i> Active Fellows ({{ fellows|length }})</h5>
+            </div>
+            <div class="card-body">
+                {% if fellows %}
+                <div class="list-group">
+                    {% for fellow in fellows[:5] %}
+                    <div class="list-group-item">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">{{ fellow.name }}</h6>
+                            <small class="text-muted">{{ fellow.phone_number }}</small>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% if fellows|length > 5 %}
+                <div class="text-center mt-3">
+                    <a href="{{ url_for('fellows') }}" class="btn btn-sm btn-outline-primary">View All Fellows</a>
+                </div>
+                {% endif %}
+                {% else %}
+                <p class="text-muted">No active fellows. <a href="{{ url_for('add_fellow') }}">Add one now</a>.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Evaluations -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-clock-history"></i> Recent Evaluations</h5>
+            </div>
+            <div class="card-body">
+                {% if recent_evals %}
+                <div class="list-group">
+                    {% for eval in recent_evals[:5] %}
+                    <div class="list-group-item">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">{{ eval.fellow.name }}</h6>
+                            <small>
+                                {% if eval.status == 'sent' %}
+                                <span class="badge bg-success">Sent</span>
+                                {% elif eval.status == 'failed' %}
+                                <span class="badge bg-danger">Failed</span>
+                                {% else %}
+                                <span class="badge bg-secondary">{{ eval.status }}</span>
+                                {% endif %}
+                            </small>
+                        </div>
+                        <small class="text-muted">
+                            {{ eval.sent_at.strftime('%Y-%m-%d %I:%M %p') }}
+                            {% if eval.survey %}
+                            - {{ eval.survey.name }}
+                            {% endif %}
+                        </small>
+                    </div>
+                    {% endfor %}
+                </div>
+                <div class="text-center mt-3">
+                    <a href="{{ url_for('tracking') }}" class="btn btn-sm btn-outline-primary">View All Tracking</a>
+                </div>
+                {% else %}
+                <p class="text-muted">No evaluations sent yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Setup Guide -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-list-check"></i> Quick Setup Checklist</h5>
+    </div>
+    <div class="card-body">
+        <ul class="mb-0">
+            <li {% if fellows|length > 0 %}class="text-success"{% endif %}>
+                <strong>Add Fellows:</strong> 
+                {% if fellows|length > 0 %}
+                ✓ {{ fellows|length }} fellows added
+                {% else %}
+                <a href="{{ url_for('add_fellow') }}">Add your first fellow</a>
+                {% endif %}
+            </li>
+            <li {% if surveys|length > 0 %}class="text-success"{% endif %}>
+                <strong>Create Surveys:</strong>
+                {% if surveys|length > 0 %}
+                ✓ {{ surveys|length }} surveys created
+                {% else %}
+                <a href="{{ url_for('add_survey') }}">Create your first survey</a>
+                {% endif %}
+            </li>
+            <li>
+                <strong>Set Up Rotation Blocks:</strong> 
+                <a href="{{ url_for('add_rotation_block') }}">Create a 2-week rotation block</a>
+            </li>
+            <li>
+                <strong>Make Assignments:</strong> 
+                Assign fellows to surveys for each rotation block
+            </li>
+            <li>
+                <strong>Send Evaluations:</strong> 
+                Use the Friday sending feature to distribute evaluations
+            </li>
+        </ul>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Fellow{% endblock %}
+
+{% block content %}
+<h1 class="mb-4"><i class="bi bi-pencil"></i> Edit Fellow</h1>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('edit_fellow', id=fellow.id) }}">
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Full Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="name" name="name" value="{{ fellow.name }}" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="phone_number" class="form-label">Phone Number <span class="text-danger">*</span></label>
+                        <input type="tel" class="form-control" id="phone_number" name="phone_number" 
+                               value="{{ fellow.phone_number }}" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email (Optional)</label>
+                        <input type="email" class="form-control" id="email" name="email" 
+                               value="{{ fellow.email or '' }}">
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="active" name="active" 
+                                   {% if fellow.active %}checked{% endif %}>
+                            <label class="form-check-label" for="active">
+                                Active (Can receive evaluations)
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle"></i> Save Changes
+                        </button>
+                        <a href="{{ url_for('fellows') }}" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-circle"></i> Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-clock-history"></i> Evaluation History</h5>
+            </div>
+            <div class="card-body">
+                {% if fellow.evaluations %}
+                <div class="list-group">
+                    {% for eval in fellow.evaluations[:5] %}
+                    <div class="list-group-item">
+                        <div class="d-flex w-100 justify-content-between">
+                            <small>{{ eval.sent_at.strftime('%Y-%m-%d %I:%M %p') }}</small>
+                            <span class="badge {% if eval.status == 'sent' %}bg-success{% else %}bg-danger{% endif %}">
+                                {{ eval.status }}
+                            </span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% if fellow.evaluations|length > 5 %}
+                <div class="text-center mt-3">
+                    <a href="{{ url_for('tracking') }}" class="btn btn-sm btn-outline-primary">View All</a>
+                </div>
+                {% endif %}
+                {% else %}
+                <p class="text-muted">No evaluations sent yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

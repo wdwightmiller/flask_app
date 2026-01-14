@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}Add Fellow{% endblock %}
+
+{% block content %}
+<h1 class="mb-4"><i class="bi bi-person-plus"></i> Add Fellow</h1>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('add_fellow') }}">
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Full Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="name" name="name" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="phone_number" class="form-label">Phone Number <span class="text-danger">*</span></label>
+                        <input type="tel" class="form-control" id="phone_number" name="phone_number" 
+                               placeholder="(555) 123-4567" required>
+                        <small class="text-muted">Any format is accepted (e.g., 555-123-4567, (555) 123-4567, 5551234567)</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email (Optional)</label>
+                        <input type="email" class="form-control" id="email" name="email" 
+                               placeholder="fellow@hospital.edu">
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle"></i> Add Fellow
+                        </button>
+                        <a href="{{ url_for('fellows') }}" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-circle"></i> Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card bg-light">
+            <div class="card-body">
+                <h5><i class="bi bi-info-circle"></i> Information</h5>
+                <p>Add fellows to your evaluation system. Once added, you'll be able to send them evaluation requests via text message.</p>
+                
+                <hr>
+                
+                <h6>Tips:</h6>
+                <ul>
+                    <li>Phone numbers can be in any format - they'll be automatically formatted</li>
+                    <li>Email is optional but helpful for your records</li>
+                    <li>Fellows are automatically marked as "Active" when added</li>
+                    <li>You can edit or deactivate fellows later</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

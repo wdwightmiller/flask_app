@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block title %}Add Survey{% endblock %}
+
+{% block content %}
+<h1 class="mb-4"><i class="bi bi-plus-circle"></i> Add Evaluation Survey</h1>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('add_survey') }}">
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Survey Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="name" name="name" 
+                               placeholder="e.g., Fellow Self-Evaluation" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="survey_type" class="form-label">Survey Type <span class="text-danger">*</span></label>
+                        <select class="form-select" id="survey_type" name="survey_type" required>
+                            <option value="">Select type...</option>
+                            <option value="self">Self Evaluation (Fellow evaluates themselves)</option>
+                            <option value="peer">Peer Evaluation (Fellow evaluates another fellow)</option>
+                            <option value="faculty">Faculty Evaluation (Fellow evaluates faculty)</option>
+                            <option value="rotation">Rotation Evaluation (Fellow evaluates rotation)</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="survey_link" class="form-label">Qualtrics Survey Link <span class="text-danger">*</span></label>
+                        <input type="url" class="form-control" id="survey_link" name="survey_link" 
+                               placeholder="https://yourschool.qualtrics.com/jfe/form/SV_xxxxx" required>
+                        <small class="text-muted">Get this from Qualtrics Distributions → Anonymous Link</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description (Optional)</label>
+                        <textarea class="form-control" id="description" name="description" rows="3"
+                                  placeholder="Brief description of what this evaluation covers"></textarea>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle"></i> Add Survey
+                        </button>
+                        <a href="{{ url_for('surveys') }}" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-circle"></i> Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card bg-light">
+            <div class="card-body">
+                <h5><i class="bi bi-info-circle"></i> Tips</h5>
+                <ul>
+                    <li>Create separate surveys for each evaluation type</li>
+                    <li>Use descriptive names (e.g., "ICU Rotation Evaluation")</li>
+                    <li>Each survey needs its own Qualtrics form</li>
+                    <li>You can create anonymous or personal links in Qualtrics</li>
+                </ul>
+                
+                <hr>
+                
+                <h6>Common Survey Types:</h6>
+                <ul class="small">
+                    <li><strong>Self:</strong> "Fellow Self-Assessment"</li>
+                    <li><strong>Peer:</strong> "Peer Evaluation"</li>
+                    <li><strong>Faculty:</strong> "Attending Evaluation"</li>
+                    <li><strong>Rotation:</strong> "ICU Rotation Feedback"</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+
+{% block title %}Add Rotation Block{% endblock %}
+
+{% block content %}
+<h1 class="mb-4"><i class="bi bi-plus-circle"></i> Add Rotation Block</h1>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('add_rotation_block') }}">
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Block Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="name" name="name" 
+                               placeholder="e.g., ICU Week 1 - Jan 6-12, 2025" required>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="start_date" class="form-label">Start Date <span class="text-danger">*</span></label>
+                                <input type="date" class="form-control" id="start_date" name="start_date" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="end_date" class="form-label">End Date <span class="text-danger">*</span></label>
+                                <input type="date" class="form-control" id="end_date" name="end_date" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Notes (Optional)</label>
+                        <textarea class="form-control" id="notes" name="notes" rows="3"
+                                  placeholder="Any additional information about this rotation block"></textarea>
+                    </div>
+
+                    <div id="dateInfo" class="alert alert-info" style="display: none;">
+                        <strong>Block Duration:</strong> <span id="duration"></span><br>
+                        <strong>Friday in this block:</strong> <span id="fridayDate"></span>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle"></i> Add Rotation Block
+                        </button>
+                        <a href="{{ url_for('rotation_blocks') }}" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-circle"></i> Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card bg-light">
+            <div class="card-body">
+                <h5><i class="bi bi-info-circle"></i> Guidelines</h5>
+                <ul>
+                    <li>Rotation blocks should typically be <strong>7 days</strong> (1 week)</li>
+                    <li>Start date should typically be a Monday</li>
+                    <li>End date should typically be a Sunday</li>
+                    <li>Each block should have exactly one Friday</li>
+                    <li>Evaluations will be sent on that Friday</li>
+                </ul>
+                
+                <hr>
+                
+                <h6>Example:</h6>
+                <p class="small">
+                    <strong>Name:</strong> ICU Week 1 - Jan 2025<br>
+                    <strong>Start:</strong> Monday, Jan 6, 2025<br>
+                    <strong>End:</strong> Sunday, Jan 12, 2025<br>
+                    <strong>Friday:</strong> Jan 10, 2025
+                </p>
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-header bg-primary text-white">
+                <h6 class="mb-0"><i class="bi bi-calendar-week"></i> Quick 1-Week Calculator</h6>
+            </div>
+            <div class="card-body">
+                <p class="small">Select a start date above, and the end date will be automatically calculated as 6 days later (7-day block).</p>
+            </div>
+        </div>
+
+        <div class="card mt-3 border-success">
+            <div class="card-body">
+                <h6 class="text-success"><i class="bi bi-lightbulb"></i> Bulk Setup Tip</h6>
+                <p class="small mb-0">To set up multiple weeks efficiently: Create all your weekly blocks first (e.g., 8-12 weeks), then go through and make assignments for each one. This way you can plan evaluations for the entire semester at once!</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Auto-calculate end date and show block info
+const startDateInput = document.getElementById('start_date');
+const endDateInput = document.getElementById('end_date');
+const dateInfo = document.getElementById('dateInfo');
+const durationSpan = document.getElementById('duration');
+const fridaySpan = document.getElementById('fridayDate');
+
+function calculateEndDate() {
+    if (startDateInput.value) {
+        const startDate = new Date(startDateInput.value);
+        const endDate = new Date(startDate);
+        endDate.setDate(endDate.getDate() + 6); // 7 days total (0-6)
+        endDateInput.value = endDate.toISOString().split('T')[0];
+        updateDateInfo();
+    }
+}
+
+function updateDateInfo() {
+    if (startDateInput.value && endDateInput.value) {
+        const startDate = new Date(startDateInput.value);
+        const endDate = new Date(endDateInput.value);
+        const daysDiff = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
+        
+        durationSpan.textContent = daysDiff + ' days';
+        
+        // Find Friday
+        let friday = null;
+        let currentDate = new Date(startDate);
+        while (currentDate <= endDate) {
+            if (currentDate.getDay() === 5) { // Friday
+                friday = currentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                break;
+            }
+            currentDate.setDate(currentDate.getDate() + 1);
+        }
+        
+        fridaySpan.textContent = friday || 'None (no Friday in this date range!)';
+        dateInfo.style.display = 'block';
+        
+        if (daysDiff !== 7) {
+            dateInfo.classList.remove('alert-info');
+            dateInfo.classList.add('alert-warning');
+            durationSpan.innerHTML += ' <strong>(Recommended: 7 days for a 1-week block)</strong>';
+        } else {
+            dateInfo.classList.remove('alert-warning');
+            dateInfo.classList.add('alert-info');
+        }
+        
+        if (!friday) {
+            dateInfo.classList.remove('alert-info');
+            dateInfo.classList.add('alert-danger');
+        }
+    }
+}
+
+startDateInput.addEventListener('change', calculateEndDate);
+endDateInput.addEventListener('change', updateDateInfo);
+</script>
+{% endblock %}

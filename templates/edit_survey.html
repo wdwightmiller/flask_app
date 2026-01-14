@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Survey{% endblock %}
+
+{% block content %}
+<h1 class="mb-4"><i class="bi bi-pencil"></i> Edit Survey</h1>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('edit_survey', id=survey.id) }}">
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Survey Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="name" name="name" 
+                               value="{{ survey.name }}" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="survey_type" class="form-label">Survey Type <span class="text-danger">*</span></label>
+                        <select class="form-select" id="survey_type" name="survey_type" required>
+                            <option value="self" {% if survey.survey_type == 'self' %}selected{% endif %}>Self Evaluation</option>
+                            <option value="peer" {% if survey.survey_type == 'peer' %}selected{% endif %}>Peer Evaluation</option>
+                            <option value="faculty" {% if survey.survey_type == 'faculty' %}selected{% endif %}>Faculty Evaluation</option>
+                            <option value="rotation" {% if survey.survey_type == 'rotation' %}selected{% endif %}>Rotation Evaluation</option>
+                            <option value="other" {% if survey.survey_type == 'other' %}selected{% endif %}>Other</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="survey_link" class="form-label">Qualtrics Survey Link <span class="text-danger">*</span></label>
+                        <input type="url" class="form-control" id="survey_link" name="survey_link" 
+                               value="{{ survey.survey_link }}" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description (Optional)</label>
+                        <textarea class="form-control" id="description" name="description" rows="3">{{ survey.description or '' }}</textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="active" name="active" 
+                                   {% if survey.active %}checked{% endif %}>
+                            <label class="form-check-label" for="active">
+                                Active (Available for assignments)
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle"></i> Save Changes
+                        </button>
+                        <a href="{{ url_for('surveys') }}" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-circle"></i> Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

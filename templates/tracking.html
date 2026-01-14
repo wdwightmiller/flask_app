@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+
+{% block title %}Tracking{% endblock %}
+
+{% block content %}
+<h1 class="mb-4"><i class="bi bi-clipboard-data"></i> Evaluation Tracking</h1>
+
+<div class="card">
+    <div class="card-body">
+        {% if evaluations.items %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Fellow</th>
+                        <th>Phone Number</th>
+                        <th>Sent At</th>
+                        <th>Status</th>
+                        <th>Message ID</th>
+                        <th>Notes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for eval in evaluations.items %}
+                    <tr>
+                        <td><strong>{{ eval.fellow.name }}</strong></td>
+                        <td>{{ eval.fellow.phone_number }}</td>
+                        <td>{{ eval.sent_at.strftime('%Y-%m-%d %I:%M %p') }}</td>
+                        <td>
+                            {% if eval.status == 'sent' %}
+                            <span class="badge bg-success">
+                                <i class="bi bi-check-circle"></i> Sent
+                            </span>
+                            {% elif eval.status == 'failed' %}
+                            <span class="badge bg-danger">
+                                <i class="bi bi-x-circle"></i> Failed
+                            </span>
+                            {% elif eval.status == 'completed' %}
+                            <span class="badge bg-info">
+                                <i class="bi bi-check-circle-fill"></i> Completed
+                            </span>
+                            {% else %}
+                            <span class="badge bg-secondary">{{ eval.status }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if eval.message_sid %}
+                            <code class="small">{{ eval.message_sid[:20] }}...</code>
+                            {% else %}
+                            -
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if eval.notes %}
+                            <span class="text-danger" title="{{ eval.notes }}">
+                                <i class="bi bi-exclamation-triangle"></i> Error
+                            </span>
+                            {% else %}
+                            -
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        {% if evaluations.pages > 1 %}
+        <nav aria-label="Page navigation">
+            <ul class="pagination justify-content-center">
+                {% if evaluations.has_prev %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('tracking', page=evaluations.prev_num) }}">Previous</a>
+                </li>
+                {% endif %}
+
+                {% for page_num in evaluations.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+                    {% if page_num %}
+                        {% if page_num == evaluations.page %}
+                        <li class="page-item active"><a class="page-link" href="#">{{ page_num }}</a></li>
+                        {% else %}
+                        <li class="page-item"><a class="page-link" href="{{ url_for('tracking', page=page_num) }}">{{ page_num }}</a></li>
+                        {% endif %}
+                    {% else %}
+                        <li class="page-item disabled"><a class="page-link" href="#">...</a></li>
+                    {% endif %}
+                {% endfor %}
+
+                {% if evaluations.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('tracking', page=evaluations.next_num) }}">Next</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+
+        {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-clipboard-data" style="font-size: 4rem; color: #dee2e6;"></i>
+            <h4 class="mt-3 text-muted">No Evaluations Sent Yet</h4>
+            <p class="text-muted">When you send evaluation requests, they'll appear here.</p>
+            <a href="{{ url_for('send_evaluations') }}" class="btn btn-primary">
+                <i class="bi bi-send"></i> Send Evaluations
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% if evaluations.items %}
+<div class="card mt-4">
+    <div class="card-body">
+        <h5><i class="bi bi-info-circle"></i> About Tracking</h5>
+        <p>This page shows all evaluation requests sent through the system.</p>
+        <ul>
+            <li><strong>Sent:</strong> SMS was successfully sent via Twilio</li>
+            <li><strong>Failed:</strong> There was an error sending the SMS (hover over the error icon for details)</li>
+            <li><strong>Message ID:</strong> Twilio's unique identifier for the message (useful for debugging)</li>
+        </ul>
+        <p class="mb-0"><strong>Note:</strong> This tracks when texts were <em>sent</em>, not when evaluations were <em>completed</em>. Check Qualtrics for completion data.</p>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

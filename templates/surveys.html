@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block title %}Surveys{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="bi bi-file-earmark-text"></i> Evaluation Surveys</h1>
+    <a href="{{ url_for('add_survey') }}" class="btn btn-primary">
+        <i class="bi bi-plus-circle"></i> Add Survey
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        {% if surveys %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Type</th>
+                        <th>Description</th>
+                        <th>Survey Link</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for survey in surveys %}
+                    <tr>
+                        <td><strong>{{ survey.name }}</strong></td>
+                        <td>
+                            {% if survey.survey_type == 'self' %}
+                            <span class="badge bg-primary">Self</span>
+                            {% elif survey.survey_type == 'peer' %}
+                            <span class="badge bg-info">Peer</span>
+                            {% elif survey.survey_type == 'faculty' %}
+                            <span class="badge bg-success">Faculty</span>
+                            {% elif survey.survey_type == 'rotation' %}
+                            <span class="badge bg-warning">Rotation</span>
+                            {% else %}
+                            <span class="badge bg-secondary">{{ survey.survey_type or 'Other' }}</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ survey.description[:50] }}{% if survey.description and survey.description|length > 50 %}...{% endif %}</td>
+                        <td>
+                            <a href="{{ survey.survey_link }}" target="_blank" class="text-break small">
+                                {{ survey.survey_link[:40] }}...
+                                <i class="bi bi-box-arrow-up-right"></i>
+                            </a>
+                        </td>
+                        <td>
+                            {% if survey.active %}
+                            <span class="badge bg-success">Active</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Inactive</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{{ url_for('edit_survey', id=survey.id) }}" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-pencil"></i> Edit
+                            </a>
+                            {% if survey.active %}
+                            <a href="{{ url_for('delete_survey', id=survey.id) }}" class="btn btn-sm btn-outline-danger" 
+                               onclick="return confirm('Deactivate {{ survey.name }}?')">
+                                <i class="bi bi-x-circle"></i> Deactivate
+                            </a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-file-earmark-text" style="font-size: 4rem; color: #dee2e6;"></i>
+            <h4 class="mt-3 text-muted">No Surveys Yet</h4>
+            <p class="text-muted">Add your first evaluation survey to get started.</p>
+            <a href="{{ url_for('add_survey') }}" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> Add Survey
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="alert alert-info mt-4">
+    <h5><i class="bi bi-info-circle"></i> About Survey Types</h5>
+    <ul class="mb-0">
+        <li><strong>Self:</strong> Fellows evaluate themselves</li>
+        <li><strong>Peer:</strong> Fellows evaluate each other</li>
+        <li><strong>Faculty:</strong> Fellows evaluate faculty members</li>
+        <li><strong>Rotation:</strong> Fellows evaluate their rotation experience</li>
+    </ul>
+</div>
+{% endblock %}

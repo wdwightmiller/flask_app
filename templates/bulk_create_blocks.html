@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+
+{% block title %}Bulk Create Rotation Blocks{% endblock %}
+
+{% block content %}
+<h1 class="mb-4"><i class="bi bi-calendar-plus"></i> Bulk Create Rotation Blocks</h1>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="bi bi-lightning-charge"></i> Quick Setup - Create Multiple Weeks</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('bulk_create_blocks') }}">
+                    <div class="mb-3">
+                        <label for="start_date" class="form-label">First Week Start Date <span class="text-danger">*</span></label>
+                        <input type="date" class="form-control" id="start_date" name="start_date" required>
+                        <small class="text-muted">Choose a Monday for best results</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="num_weeks" class="form-label">Number of Weeks to Create <span class="text-danger">*</span></label>
+                        <input type="number" class="form-control" id="num_weeks" name="num_weeks" 
+                               min="1" max="52" value="8" required>
+                        <small class="text-muted">Typically create 8-12 weeks at a time</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="name_template" class="form-label">Block Name Template <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="name_template" name="name_template" 
+                               value="Week {week} - {start} to {end}, {year}" required>
+                        <small class="text-muted">
+                            Use placeholders: <code>{week}</code>, <code>{start}</code>, <code>{end}</code>, <code>{year}</code>
+                        </small>
+                    </div>
+
+                    <div id="preview" class="alert alert-info" style="display: none;">
+                        <h6><strong>Preview of blocks to be created:</strong></h6>
+                        <div id="previewList" class="small"></div>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="button" class="btn btn-outline-primary" onclick="showPreview()">
+                            <i class="bi bi-eye"></i> Preview Blocks
+                        </button>
+                        <button type="submit" class="btn btn-success btn-lg">
+                            <i class="bi bi-check-circle"></i> Create All Blocks
+                        </button>
+                        <a href="{{ url_for('rotation_blocks') }}" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-circle"></i> Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card bg-light">
+            <div class="card-body">
+                <h5><i class="bi bi-info-circle"></i> How It Works</h5>
+                <p>This tool creates multiple consecutive weekly blocks automatically:</p>
+                <ol class="small">
+                    <li>Choose your starting Monday</li>
+                    <li>Specify how many weeks</li>
+                    <li>Customize the naming template</li>
+                    <li>Click "Create All Blocks"</li>
+                </ol>
+                
+                <hr>
+                
+                <h6>Common Name Templates:</h6>
+                <ul class="small mb-0">
+                    <li><code>Week {week} - {start}-{end}</code></li>
+                    <li><code>ICU Week {week} - {year}</code></li>
+                    <li><code>{start} to {end}, {year}</code></li>
+                    <li><code>Block {week} ({start})</code></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="card mt-3 border-success">
+            <div class="card-header bg-success text-white">
+                <h6 class="mb-0"><i class="bi bi-lightning"></i> Time Saver!</h6>
+            </div>
+            <div class="card-body">
+                <p class="small mb-0">
+                    <strong>Example:</strong> Create 12 weeks of blocks in 10 seconds instead of creating each one individually. 
+                    Then go through and assign fellows to surveys for each week. This makes planning an entire semester fast and easy!
+                </p>
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-body">
+                <h6><i class="bi bi-calendar3"></i> Typical Academic Calendar</h6>
+                <p class="small">Common fellowship schedules:</p>
+                <ul class="small mb-0">
+                    <li><strong>Quarter:</strong> 12-13 weeks</li>
+                    <li><strong>Semester:</strong> 15-18 weeks</li>
+                    <li><strong>Full Year:</strong> 52 weeks</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function showPreview() {
+    const startDateInput = document.getElementById('start_date');
+    const numWeeksInput = document.getElementById('num_weeks');
+    const nameTemplateInput = document.getElementById('name_template');
+    
+    if (!startDateInput.value || !numWeeksInput.value) {
+        alert('Please fill in start date and number of weeks');
+        return;
+    }
+    
+    const startDate = new Date(startDateInput.value);
+    const numWeeks = parseInt(numWeeksInput.value);
+    const nameTemplate = nameTemplateInput.value;
+    
+    let previewHTML = '<ol>';
+    let currentStart = new Date(startDate);
+    
+    // Show first 5 and last 2 if more than 7 weeks
+    const showFirst = Math.min(numWeeks, 5);
+    const showLast = numWeeks > 7 ? 2 : 0;
+    
+    for (let week = 1; week <= numWeeks; week++) {
+        if (week <= showFirst || week > numWeeks - showLast) {
+            const currentEnd = new Date(currentStart);
+            currentEnd.setDate(currentEnd.getDate() + 6);
+            
+            let blockName = nameTemplate
+                .replace('{week}', week)
+                .replace('{start}', currentStart.toLocaleDateString('en-US', {month: 'short', day: 'numeric'}))
+                .replace('{end}', currentEnd.toLocaleDateString('en-US', {month: 'short', day: 'numeric'}))
+                .replace('{year}', currentStart.getFullYear());
+            
+            previewHTML += `<li>${blockName}</li>`;
+        } else if (week === showFirst + 1) {
+            previewHTML += `<li>... (${numWeeks - showFirst - showLast} more weeks) ...</li>`;
+        }
+        
+        currentStart.setDate(currentStart.getDate() + 7);
+    }
+    
+    previewHTML += '</ol>';
+    
+    document.getElementById('previewList').innerHTML = previewHTML;
+    document.getElementById('preview').style.display = 'block';
+}
+
+// Auto-preview when values change
+document.getElementById('start_date').addEventListener('change', showPreview);
+document.getElementById('num_weeks').addEventListener('change', showPreview);
+document.getElementById('name_template').addEventListener('input', function() {
+    if (document.getElementById('preview').style.display === 'block') {
+        showPreview();
+    }
+});
+</script>
+{% endblock %}
