@@ -51,7 +51,11 @@
                         </td>
                         <td class="small">{{ item.block.name }}</td>
                         <td class="small text-muted">
-                            "Hi {{ item.fellow.name }}, please complete your {{ item.survey.name }}:..."
+                            {% if item.survey.sms_template %}
+                            "{{ item.survey.sms_template[:60] }}..."
+                            {% else %}
+                            "Hi {{ item.recipient.name }}, please complete your {{ item.survey.name }}:..."
+                            {% endif %}
                         </td>
                     </tr>
                     {% endfor %}
