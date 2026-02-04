@@ -348,6 +348,36 @@ def add_faculty():
     
     return render_template('add_faculty.html')
 
+@app.route('/faculty/edit/<int:id>', methods=['GET', 'POST'])
+@login_required
+def edit_faculty(id):
+    faculty = Faculty.query.get_or_404(id)
+    
+    if request.method == 'POST':
+        faculty.name = request.form.get('name')
+        faculty.phone_number = request.form.get('phone_number')
+        faculty.email = request.form.get('email')
+        faculty.active = request.form.get('active') == 'on'
+        
+        db.session.commit()
+        flash(f'Faculty member {faculty.name} updated successfully!', 'success')
+        return redirect(url_for('faculty_list'))
+    
+    return render_template('edit_faculty.html', faculty=faculty)
+
+
+@app.route('/faculty/delete/<int:id>')
+@login_required
+def delete_faculty(id):
+    faculty = Faculty.query.get_or_404(id)
+    faculty.active = False
+    db.session.commit()
+    
+    flash(f'Faculty member {faculty.name} deactivated', 'success')
+    return redirect(url_for('faculty_list'))
+
+
+
 
 @app.route('/send-evaluations', methods=['GET', 'POST'])
 @login_required
