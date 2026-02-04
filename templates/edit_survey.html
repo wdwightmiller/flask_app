@@ -22,6 +22,7 @@
                             <option value="self" {% if survey.survey_type == 'self' %}selected{% endif %}>Self Evaluation</option>
                             <option value="peer" {% if survey.survey_type == 'peer' %}selected{% endif %}>Peer Evaluation</option>
                             <option value="faculty" {% if survey.survey_type == 'faculty' %}selected{% endif %}>Faculty Evaluation</option>
+                            <option value="fellow" {% if survey.survey_type == 'fellow' %}selected{% endif %}>Fellow Evaluation (faculty evaluates fellow)</option>
                             <option value="rotation" {% if survey.survey_type == 'rotation' %}selected{% endif %}>Rotation Evaluation</option>
                             <option value="other" {% if survey.survey_type == 'other' %}selected{% endif %}>Other</option>
                         </select>
