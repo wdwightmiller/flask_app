@@ -31,7 +31,7 @@
     <div class="card-body">
         <form method="POST" action="{{ url_for('bulk_add_assignments', block_id=block.id) }}">
             <div class="row">
-                <div class="col-md-5">
+                <div class="col-md-4">
                     <label class="form-label"><strong>Select Fellows:</strong></label>
                     <div class="border rounded p-2" style="max-height: 200px; overflow-y: auto;">
                         <div class="form-check">
@@ -53,7 +53,29 @@
                     </div>
                 </div>
 
-                <div class="col-md-5">
+                <div class="col-md-4">
+                    <label class="form-label"><strong>Select Faculty:</strong></label>
+                    <div class="border rounded p-2" style="max-height: 200px; overflow-y: auto;">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="selectAllFaculty">
+                            <label class="form-check-label fw-bold" for="selectAllFaculty">
+                                Select All Faculty
+                            </label>
+                        </div>
+                        <hr class="my-2">
+                        {% for member in faculty %}
+                        <div class="form-check">
+                            <input class="form-check-input faculty-checkbox" type="checkbox" name="faculty_ids" 
+                                   value="{{ member.id }}" id="faculty{{ member.id }}">
+                            <label class="form-check-label" for="faculty{{ member.id }}">
+                                {{ member.name }}
+                            </label>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="col-md-4">
                     <label class="form-label"><strong>Select Surveys:</strong></label>
                     <div class="border rounded p-2" style="max-height: 200px; overflow-y: auto;">
                         <div class="form-check">
@@ -76,9 +98,16 @@
                     </div>
                 </div>
 
-                <div class="col-md-2 d-flex align-items-end">
-                    <button type="submit" class="btn btn-primary w-100">
-                        <i class="bi bi-check2-all"></i> Add Selected
+                <div class="col-md-12 mt-3">
+                    <label class="form-label"><strong>Optional: Schedule Send Date</strong></label>
+                    <input type="date" class="form-control" name="send_date" id="send_date" style="max-width: 300px;">
+                    <small class="text-muted">Leave blank to send on Fridays. Set specific date for holidays.</small>
+                </div>
+            </div>
+            <div class="row mt-3">
+                <div class="col-md-12">
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        <i class="bi bi-check2-all"></i> Add Selected Assignments
                     </button>
                 </div>
             </div>
@@ -97,17 +126,26 @@
             <table class="table table-hover">
                 <thead>
                     <tr>
-                        <th>Fellow</th>
+                        <th>Recipient</th>
+                        <th>Type</th>
                         <th>Survey</th>
                         <th>Survey Type</th>
                         <th>Last Sent</th>
+                        <th>Scheduled</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for assignment in assignments %}
                     <tr>
-                        <td><strong>{{ assignment.fellow.name }}</strong></td>
+                        <td><strong>{{ assignment.get_recipient_name() }}</strong></td>
+                        <td>
+                            {% if assignment.recipient_type == 'faculty' %}
+                            <span class="badge bg-info">Faculty</span>
+                            {% else %}
+                            <span class="badge bg-primary">Fellow</span>
+                            {% endif %}
+                        </td>
                         <td>{{ assignment.survey.name }}</td>
                         <td>
                             {% if assignment.survey.survey_type == 'self' %}
@@ -125,6 +163,13 @@
                             {{ assignment.last_sent.strftime('%b %d, %Y') }}
                             {% else %}
                             <span class="text-muted">Not sent yet</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if assignment.send_date %}
+                            <span class="badge bg-warning">{{ assignment.send_date.strftime('%b %d') }}</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Fridays</span>
                             {% endif %}
                         </td>
                         <td>
@@ -165,6 +210,12 @@
 // Select All Fellows
 document.getElementById('selectAllFellows').addEventListener('change', function() {
     const checkboxes = document.querySelectorAll('.fellow-checkbox');
+    checkboxes.forEach(cb => cb.checked = this.checked);
+});
+
+// Select All Faculty
+document.getElementById('selectAllFaculty').addEventListener('change', function() {
+    const checkboxes = document.querySelectorAll('.faculty-checkbox');
     checkboxes.forEach(cb => cb.checked = this.checked);
 });
 

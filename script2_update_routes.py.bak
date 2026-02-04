@@ -1,0 +1,312 @@
+#!/usr/bin/env python3
+"""
+Script 2: Update Routes
+Updates all routes to handle faculty assignments
+"""
+
+print("=" * 60)
+print("SCRIPT 2: Updating Routes")
+print("=" * 60)
+print()
+
+with open('app.py', 'r') as f:
+    content = f.read()
+
+changes = []
+
+# 1. Update send_evaluation_sms function signature
+old_sig = 'def send_evaluation_sms(fellow, survey, rotation_assignment=None, custom_message=None):'
+new_sig = 'def send_evaluation_sms(recipient, survey, rotation_assignment=None, custom_message=None):'
+
+if old_sig in content:
+    content = content.replace(old_sig, new_sig)
+    changes.append("Updated send_evaluation_sms signature")
+
+# 2. Update message building in send_evaluation_sms
+old_msg = '''        if custom_message:
+            message_body = custom_message.replace('{name}', fellow.name).replace('{link}', survey.survey_link)
+        else:
+            message_body = f"Hi {fellow.name}, please complete your {survey.name}: {survey.survey_link}"'''
+
+new_msg = '''        # Build message
+        if custom_message:
+            message_body = custom_message
+        elif survey.sms_template:
+            message_body = survey.sms_template
+        else:
+            message_body = f"Hi {recipient.name}, please complete your {survey.name}: {survey.survey_link}"
+        
+        # Replace variables
+        message_body = message_body.replace('{name}', recipient.name)
+        message_body = message_body.replace('{link}', survey.survey_link)
+        message_body = message_body.replace('{survey}', survey.name)
+        message_body = message_body.replace('{date}', datetime.now().strftime('%B %d, %Y'))'''
+
+if old_msg in content:
+    content = content.replace(old_msg, new_msg)
+    changes.append("Updated message template logic")
+
+# 3. Update Twilio send
+old_twilio = "to=format_phone_number(fellow.phone_number)"
+new_twilio = "to=format_phone_number(recipient.phone_number)"
+
+if old_twilio in content:
+    content = content.replace(old_twilio, new_twilio)
+    changes.append("Updated Twilio send")
+
+# 4. Update evaluation logging
+old_eval = "fellow_id=fellow.id,"
+new_eval = "fellow_id=recipient.id if hasattr(recipient, 'id') and rotation_assignment and rotation_assignment.recipient_type == 'fellow' else None,"
+
+if old_eval in content:
+    content = content.replace(old_eval, new_eval)
+    changes.append("Updated evaluation logging")
+
+# 5. Update Friday sending - the sending loop
+old_loop = '''            for assignment in assignments:
+                # Check if already sent today
+                if assignment.last_sent == today:
+                    already_sent_count += 1
+                    continue
+                
+                fellow = Fellow.query.get(assignment.fellow_id)
+                survey = Survey.query.get(assignment.survey_id)
+                
+                if fellow and survey and fellow.active and survey.active:
+                    success, result = send_evaluation_sms(fellow, survey, assignment)'''
+
+new_loop = '''            for assignment in assignments:
+                # Check if already sent today
+                if assignment.last_sent == today:
+                    already_sent_count += 1
+                    continue
+                
+                recipient = assignment.get_recipient()
+                survey = Survey.query.get(assignment.survey_id)
+                
+                if recipient and survey and recipient.active and survey.active:
+                    success, result = send_evaluation_sms(recipient, survey, assignment)'''
+
+if old_loop in content:
+    content = content.replace(old_loop, new_loop)
+    changes.append("Updated Friday sending loop")
+
+# 6. Update Friday preview with date checking
+old_preview = '''        for assignment in assignments:
+            if assignment.last_sent != today:  # Not already sent today
+                preview_assignments.append({
+                    'assignment': assignment,
+                    'fellow': Fellow.query.get(assignment.fellow_id),
+                    'survey': Survey.query.get(assignment.survey_id),
+                    'block': block
+                })'''
+
+new_preview = '''        for assignment in assignments:
+            if assignment.last_sent != today:
+                # Check if should send today
+                should_send = False
+                if assignment.send_date:
+                    should_send = (assignment.send_date == today)
+                elif assignment.send_on_fridays:
+                    should_send = (today.weekday() == 4)
+                else:
+                    should_send = True
+                
+                if should_send:
+                    recipient = assignment.get_recipient()
+                    preview_assignments.append({
+                        'assignment': assignment,
+                        'recipient': recipient,
+                        'recipient_type': assignment.recipient_type,
+                        'survey': Survey.query.get(assignment.survey_id),
+                        'block': block
+                    })'''
+
+if old_preview in content:
+    content = content.replace(old_preview, new_preview)
+    changes.append("Updated Friday preview with scheduling")
+
+# 7. Update bulk_add_assignments
+old_bulk = '''@app.route('/assignments/bulk-add/<int:block_id>', methods=['POST'])
+@login_required
+def bulk_add_assignments(block_id):
+    """Add multiple assignments at once"""
+    fellow_ids = request.form.getlist('fellow_ids')
+    survey_ids = request.form.getlist('survey_ids')
+    
+    added_count = 0
+    skipped_count = 0
+    
+    for fellow_id in fellow_ids:
+        for survey_id in survey_ids:
+            # Check if assignment already exists
+            existing = RotationAssignment.query.filter_by(
+                fellow_id=fellow_id,
+                survey_id=survey_id,
+                rotation_block_id=block_id
+            ).first()
+            
+            if not existing:
+                assignment = RotationAssignment(
+                    fellow_id=fellow_id,
+                    survey_id=survey_id,
+                    rotation_block_id=block_id
+                )
+                db.session.add(assignment)
+                added_count += 1
+            else:
+                skipped_count += 1
+    
+    db.session.commit()
+    
+    if skipped_count > 0:
+        flash(f'Added {added_count} assignments, skipped {skipped_count} duplicates', 'success')
+    else:
+        flash(f'Added {added_count} assignments successfully!', 'success')
+    
+    return redirect(url_for('view_block_assignments', block_id=block_id))'''
+
+new_bulk = '''@app.route('/assignments/bulk-add/<int:block_id>', methods=['POST'])
+@login_required
+def bulk_add_assignments(block_id):
+    """Add multiple assignments for fellows OR faculty"""
+    fellow_ids = request.form.getlist('fellow_ids')
+    faculty_ids = request.form.getlist('faculty_ids')
+    survey_ids = request.form.getlist('survey_ids')
+    send_date_str = request.form.get('send_date')
+    send_date = datetime.strptime(send_date_str, '%Y-%m-%d').date() if send_date_str else None
+    
+    added_count = 0
+    skipped_count = 0
+    
+    # Fellows
+    for fellow_id in fellow_ids:
+        for survey_id in survey_ids:
+            existing = RotationAssignment.query.filter_by(
+                fellow_id=fellow_id,
+                survey_id=survey_id,
+                rotation_block_id=block_id,
+                recipient_type='fellow'
+            ).first()
+            
+            if not existing:
+                assignment = RotationAssignment(
+                    fellow_id=fellow_id,
+                    survey_id=survey_id,
+                    rotation_block_id=block_id,
+                    recipient_type='fellow',
+                    send_date=send_date
+                )
+                db.session.add(assignment)
+                added_count += 1
+            else:
+                skipped_count += 1
+    
+    # Faculty
+    for faculty_id in faculty_ids:
+        for survey_id in survey_ids:
+            existing = RotationAssignment.query.filter_by(
+                faculty_id=faculty_id,
+                survey_id=survey_id,
+                rotation_block_id=block_id,
+                recipient_type='faculty'
+            ).first()
+            
+            if not existing:
+                assignment = RotationAssignment(
+                    faculty_id=faculty_id,
+                    survey_id=survey_id,
+                    rotation_block_id=block_id,
+                    recipient_type='faculty',
+                    send_date=send_date
+                )
+                db.session.add(assignment)
+                added_count += 1
+            else:
+                skipped_count += 1
+    
+    db.session.commit()
+    
+    if skipped_count > 0:
+        flash(f'Added {added_count} assignments, skipped {skipped_count} duplicates', 'success')
+    else:
+        flash(f'Added {added_count} assignments successfully!', 'success')
+    
+    return redirect(url_for('view_block_assignments', block_id=block_id))'''
+
+if old_bulk in content:
+    content = content.replace(old_bulk, new_bulk)
+    changes.append("Updated bulk_add_assignments")
+
+# 8. Update view_block_assignments to include faculty
+old_view = '''    assignments = RotationAssignment.query.filter_by(rotation_block_id=block_id).all()
+    fellows = Fellow.query.filter_by(active=True).all()
+    surveys = Survey.query.filter_by(active=True).all()
+    
+    return render_template('block_assignments.html', block=block, assignments=assignments, 
+                         fellows=fellows, surveys=surveys)'''
+
+new_view = '''    assignments = RotationAssignment.query.filter_by(rotation_block_id=block_id).all()
+    fellows = Fellow.query.filter_by(active=True).all()
+    faculty = Faculty.query.filter_by(active=True).all()
+    surveys = Survey.query.filter_by(active=True).all()
+    
+    return render_template('block_assignments.html', block=block, assignments=assignments, 
+                         fellows=fellows, faculty=faculty, surveys=surveys)'''
+
+if old_view in content:
+    content = content.replace(old_view, new_view)
+    changes.append("Updated view_block_assignments")
+
+# 9. Update add_survey route
+old_add_survey = '''    survey = Survey(
+        name=name,
+        description=description,
+        survey_link=survey_link,
+        survey_type=survey_type
+    )'''
+
+new_add_survey = '''    sms_template = request.form.get('sms_template', '').strip()
+    
+    survey = Survey(
+        name=name,
+        description=description,
+        survey_link=survey_link,
+        survey_type=survey_type,
+        sms_template=sms_template if sms_template else None
+    )'''
+
+if old_add_survey in content:
+    content = content.replace(old_add_survey, new_add_survey)
+    changes.append("Updated add_survey")
+
+# 10. Update edit_survey route
+old_edit = '''    survey.name = request.form.get('name')
+        survey.description = request.form.get('description')
+        survey.survey_link = request.form.get('survey_link')
+        survey.survey_type = request.form.get('survey_type')
+        survey.active = request.form.get('active') == 'on'''
+
+new_edit = '''    survey.name = request.form.get('name')
+        survey.description = request.form.get('description')
+        survey.survey_link = request.form.get('survey_link')
+        survey.survey_type = request.form.get('survey_type')
+        sms_template = request.form.get('sms_template', '').strip()
+        survey.sms_template = sms_template if sms_template else None
+        survey.active = request.form.get('active') == 'on''''
+
+if old_edit in content:
+    content = content.replace(old_edit, new_edit)
+    changes.append("Updated edit_survey")
+
+# Save
+with open('app.py', 'w') as f:
+    f.write(content)
+
+print("Changes made:")
+for change in changes:
+    print(f"  ✅ {change}")
+
+print()
+print("✅ Script 2 complete!")
+print()

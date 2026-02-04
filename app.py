@@ -62,7 +62,8 @@ class Survey(db.Model):
     name = db.Column(db.String(100), nullable=False)  # e.g., "Fellow Self-Evaluation", "Peer Evaluation"
     description = db.Column(db.Text)
     survey_link = db.Column(db.String(500), nullable=False)
-    survey_type = db.Column(db.String(50))  # 'self', 'peer', 'faculty', 'rotation'
+    survey_type = db.Column(db.String(50))
+    sms_template = db.Column(db.Text)  # Custom SMS message template  # 'self', 'peer', 'faculty', 'rotation'
     active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     assignments = db.relationship('RotationAssignment', backref='survey', lazy=True)
@@ -108,7 +109,10 @@ class RotationBlock(db.Model):
 class RotationAssignment(db.Model):
     """Assigns fellows to surveys for specific rotation blocks"""
     id = db.Column(db.Integer, primary_key=True)
-    fellow_id = db.Column(db.Integer, db.ForeignKey('fellow.id'), nullable=False)
+    fellow_id = db.Column(db.Integer, db.ForeignKey('fellow.id'), nullable=True)
+    faculty_id = db.Column(db.Integer, db.ForeignKey('faculty.id'), nullable=True)
+    recipient_type = db.Column(db.String(20), default='fellow')
+    send_date = db.Column(db.Date)
     survey_id = db.Column(db.Integer, db.ForeignKey('survey.id'), nullable=False)
     rotation_block_id = db.Column(db.Integer, db.ForeignKey('rotation_block.id'), nullable=False)
     send_on_fridays = db.Column(db.Boolean, default=True)
@@ -120,10 +124,26 @@ class RotationAssignment(db.Model):
     __table_args__ = (db.UniqueConstraint('fellow_id', 'survey_id', 'rotation_block_id'),)
 
 
+
+    
+    def get_recipient(self):
+        """Get the fellow or faculty member"""
+        if self.recipient_type == 'faculty':
+            return Faculty.query.get(self.faculty_id)
+        return Fellow.query.get(self.fellow_id)
+    
+    def get_recipient_name(self):
+        """Get recipient name"""
+        recipient = self.get_recipient()
+        return recipient.name if recipient else "Unknown"
+
 class Evaluation(db.Model):
     """Log of sent evaluations"""
     id = db.Column(db.Integer, primary_key=True)
-    fellow_id = db.Column(db.Integer, db.ForeignKey('fellow.id'), nullable=False)
+    fellow_id = db.Column(db.Integer, db.ForeignKey('fellow.id'), nullable=True)
+    faculty_id = db.Column(db.Integer, db.ForeignKey('faculty.id'), nullable=True)
+    recipient_type = db.Column(db.String(20), default='fellow')
+    send_date = db.Column(db.Date)
     survey_id = db.Column(db.Integer, db.ForeignKey('survey.id'))
     rotation_assignment_id = db.Column(db.Integer, db.ForeignKey('rotation_assignment.id'))
     sent_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -153,25 +173,34 @@ def format_phone_number(phone):
         return f'+{digits}'
 
 
-def send_evaluation_sms(fellow, survey, rotation_assignment=None, custom_message=None):
+def send_evaluation_sms(recipient, survey, rotation_assignment=None, custom_message=None):
     """Send evaluation SMS via Twilio"""
     try:
         client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
         
+        # Build message
         if custom_message:
-            message_body = custom_message.replace('{name}', fellow.name).replace('{link}', survey.survey_link)
+            message_body = custom_message
+        elif survey.sms_template:
+            message_body = survey.sms_template
         else:
-            message_body = f"Hi {fellow.name}, please complete your {survey.name}: {survey.survey_link}"
+            message_body = f"Hi {recipient.name}, please complete your {survey.name}: {survey.survey_link}"
+        
+        # Replace variables
+        message_body = message_body.replace('{name}', recipient.name)
+        message_body = message_body.replace('{link}', survey.survey_link)
+        message_body = message_body.replace('{survey}', survey.name)
+        message_body = message_body.replace('{date}', datetime.now().strftime('%B %d, %Y'))
         
         message = client.messages.create(
             body=message_body,
             from_=TWILIO_PHONE_NUMBER,
-            to=format_phone_number(fellow.phone_number)
+            to=format_phone_number(recipient.phone_number)
         )
         
         # Log the evaluation
         evaluation = Evaluation(
-            fellow_id=fellow.id,
+            fellow_id=recipient.id if hasattr(recipient, 'id') and rotation_assignment and rotation_assignment.recipient_type == 'fellow' else None,
             survey_id=survey.id,
             rotation_assignment_id=rotation_assignment.id if rotation_assignment else None,
             status='sent',
@@ -189,7 +218,7 @@ def send_evaluation_sms(fellow, survey, rotation_assignment=None, custom_message
     except Exception as e:
         # Log failed evaluation
         evaluation = Evaluation(
-            fellow_id=fellow.id,
+            fellow_id=recipient.id if hasattr(recipient, 'id') and rotation_assignment and rotation_assignment.recipient_type == 'fellow' else None,
             survey_id=survey.id if survey else None,
             rotation_assignment_id=rotation_assignment.id if rotation_assignment else None,
             status='failed',
@@ -458,6 +487,8 @@ def edit_survey(id):
         survey.description = request.form.get('description')
         survey.survey_link = request.form.get('survey_link')
         survey.survey_type = request.form.get('survey_type')
+        sms_template = request.form.get('sms_template', '').strip()
+        survey.sms_template = sms_template if sms_template else None
         survey.active = request.form.get('active') == 'on'
         
         db.session.commit()
@@ -592,10 +623,11 @@ def view_block_assignments(block_id):
     block = RotationBlock.query.get_or_404(block_id)
     assignments = RotationAssignment.query.filter_by(rotation_block_id=block_id).all()
     fellows = Fellow.query.filter_by(active=True).all()
+    faculty = Faculty.query.filter_by(active=True).all()
     surveys = Survey.query.filter_by(active=True).all()
     
     return render_template('block_assignments.html', block=block, assignments=assignments, 
-                         fellows=fellows, surveys=surveys)
+                         fellows=fellows, faculty=faculty, surveys=surveys)
 
 
 @app.route('/assignments/add', methods=['POST'])
@@ -644,27 +676,56 @@ def delete_assignment(id):
 @app.route('/assignments/bulk-add/<int:block_id>', methods=['POST'])
 @login_required
 def bulk_add_assignments(block_id):
-    """Add multiple assignments at once"""
+    """Add multiple assignments for fellows OR faculty"""
     fellow_ids = request.form.getlist('fellow_ids')
+    faculty_ids = request.form.getlist('faculty_ids')
     survey_ids = request.form.getlist('survey_ids')
+    send_date_str = request.form.get('send_date')
+    send_date = datetime.strptime(send_date_str, '%Y-%m-%d').date() if send_date_str else None
     
     added_count = 0
     skipped_count = 0
     
+    # Fellows
     for fellow_id in fellow_ids:
         for survey_id in survey_ids:
-            # Check if assignment already exists
             existing = RotationAssignment.query.filter_by(
                 fellow_id=fellow_id,
                 survey_id=survey_id,
-                rotation_block_id=block_id
+                rotation_block_id=block_id,
+                recipient_type='fellow'
             ).first()
             
             if not existing:
                 assignment = RotationAssignment(
                     fellow_id=fellow_id,
                     survey_id=survey_id,
-                    rotation_block_id=block_id
+                    rotation_block_id=block_id,
+                    recipient_type='fellow',
+                    send_date=send_date
+                )
+                db.session.add(assignment)
+                added_count += 1
+            else:
+                skipped_count += 1
+    
+    # Faculty
+    for faculty_id in faculty_ids:
+        for survey_id in survey_ids:
+            existing = RotationAssignment.query.filter_by(
+                faculty_id=faculty_id,
+                survey_id=survey_id,
+                rotation_block_id=block_id,
+                recipient_type='faculty'
+            ).first()
+            
+            if not existing:
+                assignment = RotationAssignment(
+                    faculty_id=faculty_id,
+                    survey_id=survey_id,
+                    rotation_block_id=block_id,
+                    recipient_type='faculty',
+                    send_date=send_date
                 )
                 db.session.add(assignment)
                 added_count += 1
@@ -712,11 +773,11 @@ def send_friday_evaluations():
                     already_sent_count += 1
                     continue
                 
-                fellow = Fellow.query.get(assignment.fellow_id)
+                recipient = assignment.get_recipient()
                 survey = Survey.query.get(assignment.survey_id)
                 
-                if fellow and survey and fellow.active and survey.active:
-                    success, result = send_evaluation_sms(fellow, survey, assignment)
+                if recipient and survey and recipient.active and survey.active:
+                    success, result = send_evaluation_sms(recipient, survey, assignment)
                     if success:
                         success_count += 1
                     else:
@@ -746,13 +807,25 @@ def send_friday_evaluations():
         ).all()
         
         for assignment in assignments:
-            if assignment.last_sent != today:  # Not already sent today
-                preview_assignments.append({
-                    'assignment': assignment,
-                    'fellow': Fellow.query.get(assignment.fellow_id),
-                    'survey': Survey.query.get(assignment.survey_id),
-                    'block': block
-                })
+            if assignment.last_sent != today:
+                # Check if should send today
+                should_send = False
+                if assignment.send_date:
+                    should_send = (assignment.send_date == today)
+                elif assignment.send_on_fridays:
+                    should_send = (today.weekday() == 4)
+                else:
+                    should_send = True
+                
+                if should_send:
+                    recipient = assignment.get_recipient()
+                    preview_assignments.append({
+                        'assignment': assignment,
+                        'recipient': recipient,
+                        'recipient_type': assignment.recipient_type,
+                        'survey': Survey.query.get(assignment.survey_id),
+                        'block': block
+                    })
     
     return render_template('send_friday_evaluations.html', 
                          preview_assignments=preview_assignments,

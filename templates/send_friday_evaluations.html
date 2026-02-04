@@ -4,7 +4,7 @@
 
 {% block content %}
 <h1 class="mb-4">
-    <i class="bi bi-calendar-check"></i> Send Friday Evaluations
+    <i class="bi bi-send"></i> Send Evaluations Now
     {% if is_friday %}
     <span class="badge bg-success">Today is Friday!</span>
     {% else %}
@@ -36,8 +36,15 @@
                 <tbody>
                     {% for item in preview_assignments[:20] %}
                     <tr>
-                        <td><strong>{{ item.fellow.name }}</strong></td>
-                        <td class="small">{{ item.fellow.phone_number }}</td>
+                        <td>
+                            <strong>{{ item.recipient.name }}</strong>
+                            {% if item.recipient_type == 'faculty' %}
+                            <span class="badge bg-info">Faculty</span>
+                            {% else %}
+                            <span class="badge bg-primary">Fellow</span>
+                            {% endif %}
+                        </td>
+                        <td class="small">{{ item.recipient.phone_number }}</td>
                         <td>
                             {{ item.survey.name }}
                             <span class="badge bg-secondary">{{ item.survey.survey_type }}</span>

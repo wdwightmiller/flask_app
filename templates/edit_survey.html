@@ -34,6 +34,16 @@
                     </div>
 
                     <div class="mb-3">
+                        <label for="sms_template" class="form-label">SMS Message Template (Optional)</label>
+                        <textarea class="form-control" id="sms_template" name="sms_template" rows="3"
+                                  placeholder="Hi {name}, please complete your {survey}: {link}">{{ survey.sms_template or '' }}</textarea>
+                        <small class="text-muted">
+                            Variables: {name}, {survey}, {link}, {date}<br>
+                            Leave blank for default: "Hi {name}, please complete your {survey}: {link}"
+                        </small>
+                    </div>
+
+                    <div class="mb-3">
                         <label for="description" class="form-label">Description (Optional)</label>
                         <textarea class="form-control" id="description" name="description" rows="3">{{ survey.description or '' }}</textarea>
                     </div>
